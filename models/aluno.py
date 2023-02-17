@@ -1,12 +1,13 @@
-alunos = []
+#%%
+list_alunos = []
 def get_last_id():
-    if alunos:
-        last_aluno = alunos[-1]
+    if list_alunos:
+        last_aluno = list_alunos[-1]
     else:
         return 1
-    return last_aluno['id'] + 1
+    return last_aluno.id + 1
 
-
+#%%
 class Aluno:
     def __init__(self, curso, anoIngresso, anoEvasao, tipoEvasao):
         self.id = get_last_id()
@@ -26,3 +27,4 @@ class Aluno:
                 }
 
     
+# %%
