@@ -35,18 +35,31 @@ class AlunoResource(Resource):
         return aluno.data, HTTPStatus.OK
 
     def put(self, aluno_id):
-        data = request.get_json
+        data = request.get_json()
+        print(data['anoEvasao'], type(data['anoEvasao']))
         aluno = (next((aluno for aluno in list_alunos 
                         if aluno.id == aluno_id), None))
         if aluno is None:
             return {'message' : 'studant not found'}, HTTPStatus.NOT_FOUND
 
         aluno.curso = data['curso']
-        aluno.anoIngressso = data['anoIngresso'],
-        aluno.anoEvasao = data['anoEvasao'],
+        aluno.anoIngressso = data['anoIngresso']
+        aluno.anoEvasao = data['anoEvasao']
         aluno.tipoEvasao = data['tipoEvasao']
 
         return aluno.data, HTTPStatus.OK
+
+    def delete(self, aluno_id):
+        aluno = (next((aluno for aluno in 
+                        list_alunos if aluno.id == aluno_id), None))
+
+        if aluno is None:
+            return {'message': 'studant not found'}, HTTPStatus.NOT_FOUND
+
+        list_alunos.remove(aluno)
+
+        return {}, HTTPStatus.NO_CONTENT
+
 
 class AlunoPublishResource(Resource):
     # Os métodos put e delete estão sendo usados de maneira flexível, 
