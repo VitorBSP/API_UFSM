@@ -1,38 +1,39 @@
-
-from flask import Flask, jsonify, request
-from http import HTTPStatus
+from flask import Flask
+from flask_migrate import Migrate
 from flask_restful import Api
+
+from config import Config
+from extensions import db
+
+from resources.user import UserListResource
 from resources.aluno import AlunoListResource, AlunoResource, AlunoPublishResource
 
-alunos =    [
-                {
-                    'id' : 1,
-                    'curso' : 'Estatística',
-                    'anoIngresso' : 2018,
-                    'anoEvasao' : 2023,
-                    'tipoEvasao' : 1
-                },
+def create_app():
+    app = Flask(__name__)
+    app.config.from_object(Config)
+    register_extensions(app)
+    register_resources(app)
+    return app
 
-                {
-                    'id' : 2,
-                    'curso' : 'Oceanografia',
-                    'anoIngresso' : 2022,
-                    'anoEvasao' : 2027,
-                    'tipoEvasao' : 1
-                }
-            ]
+def register_extensions(app):
+    db.init_app(app)
+    migrate = Migrate(app, db)
 
-app = Flask(__name__)
-api = Api(app)
+def register_resources(app):
+    api = Api(app)
+    api.add_resource(UserListResource, '/users')
+    api.add_resource(AlunoListResource, '/alunos')
+    api.add_resource(AlunoResource, '/alunos/<int:aluno_id>')
+    api.add_resource(AlunoPublishResource, '/alunos/<int:aluno_id>/publish')
 
-api.add_resource(AlunoListResource, '/alunos')
-api.add_resource(AlunoResource, '/alunos/<int:aluno_id>')
-api.add_resource(AlunoPublishResource, '/alunos/<int:aluno_id>/publish')
+# @app.route("/")
+# def hello():
 
-@app.route("/")
-def hello():
+#     return "Hello World!"
 
-    return "Hello World!"
+if __name__ == '__main__':
+    app = create_app()
+    app.run()
 
 
 # @app.route('/alunos', methods=['GET'])
@@ -84,7 +85,3 @@ def hello():
 #         return jsonify({'message': 'recipe not found'}), HTTPStatus.NOT_FOUND
 #     alunos[:] = [aluno for aluno in alunos if aluno.get('id') != aluno_id]
 #     return jsonify(alunos)
-
-if __name__ == "__main__":
-
-    app.run(port= 5000, debug=True)
