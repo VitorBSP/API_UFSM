@@ -1,62 +1,96 @@
 from flask import request
 from flask_restful import Resource
 from http import HTTPStatus
-from models.aluno import Aluno, list_alunos
-
+from models.cursos import Cursos  
+from flask_jwt_extended import (jwt_required, get_jwt_identity)
 
 class AlunoListResource(Resource):
     def get(self):
+
+        cursos = Cursos.get_all_published()
         data = []
-        for aluno in list_alunos:
-            if aluno.is_publish is True:
-                data.append(aluno.data)
+        
+        for curso in cursos:
+            data.append(curso.data())
+        
         return {'data' : data}, HTTPStatus.OK
     
+    @jwt_required()
     def post(self):
         data = request.get_json()
-        aluno = Aluno  (
-                            curso = data['curso'],
-                            anoIngresso = data['anoIngresso'],
-                            anoEvasao = data['anoEvasao'],
-                            tipoEvasao = data['tipoEvasao']
-                        )
-        list_alunos.append(aluno)
+        current_user = get_jwt_identity()
+
+        curso = Cursos(
+                        course = data['curso'],
+                        comment = data['comment'],
+                        num_of_graduated = data['num_of_graduated'],
+                        rate = data['rate'],
+                        city_country = data['city'],
+                        user_id = current_user
+                    )
+        
+        curso.save()
             
-        return aluno.data, HTTPStatus.CREATED
+        return curso.data(), HTTPStatus.CREATED
 
 
 class AlunoResource(Resource):
-    def get(self, aluno_id):
-        aluno = (next((aluno for aluno in list_alunos 
-                        if aluno.id == aluno_id and aluno.is_publish == True), 
-                        None))
-        if aluno is None:
-            return {'message' : 'studant not found'}, HTTPStatus.NOT_FOUND
-        return aluno.data, HTTPStatus.OK
+    
+    @jwt_required(optional=True)
+    def get(self, curso_id):
 
-    def put(self, aluno_id):
+        curso = Cursos.get_by_id(curso_id)
+
+        if curso is None:
+            return {'message' : 'studant not found'}, HTTPStatus.NOT_FOUND
+        
+        current_user = get_jwt_identity()
+
+        if curso.is_publish == False and curso.user_id != current_user:
+            return {'message': 'Access is not allowed'}, HTTPStatus.FORBIDDEN
+
+        data = curso.data()
+
+        return data, HTTPStatus.OK
+  
+    @jwt_required()
+    def put(self, curso_id):
+
         data = request.get_json()
-        print(data['anoEvasao'], type(data['anoEvasao']))
-        aluno = (next((aluno for aluno in list_alunos 
-                        if aluno.id == aluno_id), None))
-        if aluno is None:
+
+        curso = Cursos.get_by_id(curso_id)
+
+        if curso is None:
             return {'message' : 'studant not found'}, HTTPStatus.NOT_FOUND
+        
+        current_user = get_jwt_identity()
 
-        aluno.curso = data['curso']
-        aluno.anoIngressso = data['anoIngresso']
-        aluno.anoEvasao = data['anoEvasao']
-        aluno.tipoEvasao = data['tipoEvasao']
+        if current_user != curso.user_id:
+            return {'message': 'Access is not allowed'}, HTTPStatus.FORBIDDEN
+        
+        curso.course = data['curso']
+        curso.comment = data['comment']
+        curso.num_of_graduated = data['num_of_graduated']
+        curso.rate = data['rate']
+        curso.city_country = data['city']
+        curso.save()
 
-        return aluno.data, HTTPStatus.OK
+        return curso.data(), HTTPStatus.OK
 
-    def delete(self, aluno_id):
-        aluno = (next((aluno for aluno in 
-                        list_alunos if aluno.id == aluno_id), None))
+    @jwt_required()
+    def delete(self, curso_id):
 
-        if aluno is None:
-            return {'message': 'studant not found'}, HTTPStatus.NOT_FOUND
+        curso = Cursos.get_by_id(curso_id)
 
-        list_alunos.remove(aluno)
+        if curso is None:
+            return {'message' : 'studant not found'}, HTTPStatus.NOT_FOUND
+        
+        current_user = get_jwt_identity()
+
+        if current_user != curso.user_id:
+            return {'message': 'Access is not allowed'}, HTTPStatus.FORBIDDEN
+        
+        curso.delete()
 
         return {}, HTTPStatus.NO_CONTENT
 
@@ -64,22 +98,37 @@ class AlunoResource(Resource):
 class AlunoPublishResource(Resource):
     # Os métodos put e delete estão sendo usados de maneira flexível, 
     # não necessariamente para atualizar ou deletar o conteúdo 
-    def put(self, aluno_id):
-        aluno = (next((aluno for aluno in list_alunos 
-                        if aluno.id == aluno_id), None))
-        if aluno is None:
-            return {'message' : 'studant not found'}, HTTPStatus.NOT_FOUND
+    @jwt_required()
+    def put(self, curso_id):
 
-        aluno.is_publish = True
+        curso = Cursos.get_by_id(curso_id)
+
+        if curso is None:
+            return {'message' : 'studant not found'}, HTTPStatus.NOT_FOUND
+        
+        current_user = get_jwt_identity()
+
+        if current_user != curso.user_id:
+            return {'message': 'Access is not allowed'}, HTTPStatus.FORBIDDEN
+
+        curso.is_publish = True
+        curso.save()
 
         return {}, HTTPStatus.NO_CONTENT
 
-    def delete(self, aluno_id):
-        aluno = (next((aluno for aluno in list_alunos 
-                        if aluno.id == aluno_id), None))
-        if aluno is None:
-            return {'message' : 'studant not found'}, HTTPStatus.NOT_FOUND
+    @jwt_required()
+    def delete(self, curso_id):
+        curso = Cursos.get_by_id(curso_id)
 
-        aluno.is_publish = False
+        if curso is None:
+            return {'message' : 'studant not found'}, HTTPStatus.NOT_FOUND
+        
+        current_user = get_jwt_identity()
+
+        if current_user != curso.user_id:
+            return {'message': 'Access is not allowed'}, HTTPStatus.FORBIDDEN
+
+        curso.is_publish = False
+        curso.save()
 
         return {}, HTTPStatus.NO_CONTENT

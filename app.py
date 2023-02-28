@@ -3,9 +3,10 @@ from flask_migrate import Migrate
 from flask_restful import Api
 
 from config import Config
-from extensions import db
+from extensions import db, jwt
 
-from resources.user import UserListResource
+from resources.token import TokenResource, RefreshResource, RevokeResource, black_list
+from resources.user import UserListResource, UserResource, UserTesting, MeResource
 from resources.aluno import AlunoListResource, AlunoResource, AlunoPublishResource
 
 def create_app():
@@ -18,14 +19,27 @@ def create_app():
 def register_extensions(app):
     db.init_app(app)
     migrate = Migrate(app, db)
+    jwt.init_app(app)
 
+    @jwt.token_in_blocklist_loader
+    def check_if_token_in_blacklist(jwt_header, jwt_payload):
+        jti = jwt_payload['jti']
+        return jti in black_list
+    
 def register_resources(app):
     api = Api(app)
     api.add_resource(UserListResource, '/users')
-    api.add_resource(AlunoListResource, '/alunos')
-    api.add_resource(AlunoResource, '/alunos/<int:aluno_id>')
-    api.add_resource(AlunoPublishResource, '/alunos/<int:aluno_id>/publish')
+    api.add_resource(UserResource, '/users/<string:username>')
+    api.add_resource(UserTesting, '/users/<int:user_id>')
+    api.add_resource(MeResource, '/me') 
 
+    api.add_resource(AlunoListResource, '/alunos')
+    api.add_resource(AlunoResource, '/alunos/<int:curso_id>')
+    api.add_resource(AlunoPublishResource, '/alunos/<int:curso_id>/publish')
+
+    api.add_resource(TokenResource, '/token')
+    api.add_resource(RefreshResource, '/refresh')
+    api.add_resource(RevokeResource, '/revoke') 
 # @app.route("/")
 # def hello():
 
