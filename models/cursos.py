@@ -16,17 +16,6 @@ class Cursos(db.Model):
     updated_at = db.Column(db.DateTime(), nullable=False, 
                             server_default=db.func.now(), onupdate=db.func.now())
     user_id = db.Column(db.Integer(), db.ForeignKey("user.id"))
-
-    def data(self):
-        return {
-                'id': self.id,
-                'course': self.course,
-                'comment': self.comment,
-                'num_of_graduated': self.num_of_graduated,
-                'rate': self.rate,
-                'city_country': self.city_country,
-                'user_id': self.user_id
-                }
     
     @classmethod
     def get_all_published(cls):

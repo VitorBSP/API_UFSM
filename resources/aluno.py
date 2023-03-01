@@ -1,37 +1,38 @@
 from flask import request
 from flask_restful import Resource
 from http import HTTPStatus
-from models.cursos import Cursos  
+from pprint import pprint
 from flask_jwt_extended import (jwt_required, get_jwt_identity)
+from marshmallow import ValidationError
+
+from models.cursos import Cursos  
+from schemas.cursos import CursosSchema
+
+cursos_schema = CursosSchema()
+cursos_list_schema = CursosSchema(many=True)
 
 class AlunoListResource(Resource):
     def get(self):
 
         cursos = Cursos.get_all_published()
-        data = []
-        
-        for curso in cursos:
-            data.append(curso.data())
-        
-        return {'data' : data}, HTTPStatus.OK
+
+        return cursos_list_schema.dump(cursos), HTTPStatus.OK
     
     @jwt_required()
     def post(self):
-        data = request.get_json()
+        json_data = request.get_json()
         current_user = get_jwt_identity()
 
-        curso = Cursos(
-                        course = data['curso'],
-                        comment = data['comment'],
-                        num_of_graduated = data['num_of_graduated'],
-                        rate = data['rate'],
-                        city_country = data['city'],
-                        user_id = current_user
-                    )
-        
+        try:
+            data = cursos_schema.load(json_data)
+        except ValidationError as err:
+            pprint(err.messages)
+
+        curso = Cursos(**data)
+        curso.user_id = current_user        
         curso.save()
             
-        return curso.data(), HTTPStatus.CREATED
+        return cursos_schema.dump(curso), HTTPStatus.CREATED
 
 
 class AlunoResource(Resource):
@@ -93,6 +94,37 @@ class AlunoResource(Resource):
         curso.delete()
 
         return {}, HTTPStatus.NO_CONTENT
+    
+    @jwt_required()
+    def patch(self, curso_id):
+            print('------------------------')
+            json_data = request.get_json()
+
+            
+            data = cursos_schema.load(json_data)
+            
+            curso = Cursos.get_by_id(curso_id)
+
+            print(curso.course)
+            print('try')
+            print(data)
+            print(data['comment'])
+
+            if curso is None:
+                return {'message': 'Course not found'}, HTTPStatus.NOT_FOUND
+            
+            current_user = get_jwt_identity()
+            if current_user != curso.user_id:
+                return {'message': 'Access is not allowed'}, HTTPStatus.FORBIDDEN
+            
+            curso.course = data.get('course') or curso.course
+            curso.comment = data.get('comment') or curso.comment
+            curso.num_of_graduated = data.get('num_of_graduated')  or curso.num_of_graduated
+            curso.rate = data.get('rate')  or curso.rate
+            curso.city_country = data.get('city_country') or curso.city_country
+            curso.save()
+
+            return cursos_schema.dump(curso), HTTPStatus.OK
 
 
 class AlunoPublishResource(Resource):
@@ -100,6 +132,7 @@ class AlunoPublishResource(Resource):
     # não necessariamente para atualizar ou deletar o conteúdo 
     @jwt_required()
     def put(self, curso_id):
+        print('---')
 
         curso = Cursos.get_by_id(curso_id)
 
